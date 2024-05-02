@@ -1,0 +1,16 @@
+.wrapper {
+  max-width: 800px;
+  min-height: 100vh;
+  margin: 0 auto;
+}
+
+.post {
+  padding: 8px;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 16px 0;
+}
