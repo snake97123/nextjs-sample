@@ -129,6 +129,8 @@ type StaticProps = {
     contents
   };
 
+  
+
   // console.dir(post, { depth: null});
 
   return {
@@ -136,7 +138,10 @@ type StaticProps = {
        post 
     }
   };
+
 }
+
+
 
 const Home: NextPage<StaticProps> = ({ post }) => {
    if(!post) {
@@ -162,6 +167,45 @@ const Home: NextPage<StaticProps> = ({ post }) => {
               }
             </div>
           </div>
+        </div>
+        <div>
+        {post.contents.map((content, index) => {
+            const key = `${post.id}-${index}`;
+            switch(content.type) {
+              case 'heading_2':
+                return (
+                  <h2 key={key} className={styles.heading2}>
+                    {content.text}
+                  </h2>
+                );
+              case 'heading_3':
+                return (
+                  <h3 key={key} className={styles.heading3}>
+                    {content.text}
+                  </h3>
+                );
+              case 'paragraph':
+                return (
+                  <p key={key} className={styles.paragraph}>
+                    {content.text}
+                  </p>
+                );
+              case 'code':
+                return (
+                  <pre
+                      className={`${styles.code} lang-${content.language} `}
+                  >
+                    <code>{content.text}</code>
+                  </pre>
+                );
+              case 'quote':
+                return (
+                  <blockquote key={key} className={styles.quote}>
+                    {content.text}
+                  </blockquote>
+                );
+            }
+        })}
         </div>
       </div>
     </div>
