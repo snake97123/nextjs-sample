@@ -33,7 +33,7 @@ export type Post = {
 }
 
 type StaticProps = {
-  post: Post | null;
+  posts: Post[];
 }
 
   export const getStaticProps: GetStaticProps<StaticProps> = async () => {
@@ -58,7 +58,16 @@ type StaticProps = {
   });
 
   // console.dir(database, { depth: null });
-  const page = database.results[0];
+  const posts: Post[] = [];
+  const blockResponse = await Promise.all(
+    database.results.map((page) => {
+      return notion.blocks.children.list({
+        block_id: page.id
+      });
+    })
+  );
+  // const page = database.results[0];
+  database.results.forEach((page, index) => {
   if(!page || !('properties' in page)) {
     return {
       props: {
@@ -78,11 +87,8 @@ type StaticProps = {
   if (page.properties['slug'] && page.properties['slug'].type === 'multi_select' && Array.isArray(page.properties['slug'].multi_select)) {
     slug = page.properties['slug'].multi_select[0]?.name ?? null;
   }
-
-  const blocks = await notion.blocks.children.list({
-    block_id: page.id
-  });
-
+  
+  const blocks = blockResponse[index];
   const contents: Content[] = [];
   blocks.results.forEach((block) => {
     if (!('type' in block)) {
@@ -122,22 +128,22 @@ type StaticProps = {
     }
   });
 
-  const post: Post = {
+  posts.push({
     id: page.id,
     title,
     slug,
-    createdTs, 
+    createdTs,
     lastEditedTs,
     contents
-  };
+  })
 
   
 
   // console.dir(post, { depth: null});
-
+  });
   return {
     props: {
-       post 
+       posts 
     }
   };
 
@@ -145,77 +151,73 @@ type StaticProps = {
 
 
 
-const Home: NextPage<StaticProps> = ({ post }) => {
+const Home: NextPage<StaticProps> = ({ posts }) => {
 
-  useEffect(() => {
-    prism.highlightAll();
-  }, []);
-   if(!post) {
+  if (!posts) {
     return null;
-   } 
+  }
 
-   return (
+  return (
     <div className={styles.wrapper}>
-      <div className={styles.post}>
-        <h1 className={styles.title}>{post.title}</h1>
-        <div className={styles.timestampWrapper}>
-          <div>
-            <div className={styles.timestamp}>
-              作成日時:{' '}
-              {
-                dayjs(post.createdTs).format('YYYY/MM/DD HH:mm:ss')
-              }
+      {posts.map((post) => {
+        return (
+          <div className={styles.post} key={post.id}>
+            <h1 className={styles.title}>{post.title}</h1>
+            <div className={styles.timestampWrapper}>
+              <div>
+                <div className={styles.timestamp}>
+                  作成日時:{' '}
+                  {dayjs(post.createdTs).format('YYYY/MM/DD HH:mm:ss')}
+                </div>
+                <div className={styles.timestamp}>
+                  更新日時:{' '}
+                  {dayjs(post.lastEditedTs).format('YYYY/MM/DD HH:mm:ss')}
+                </div>
+              </div>
             </div>
-            <div className={styles.timestamp}>
-              更新日時:{' '}
-              {
-                dayjs(post.lastEditedTs).format('YYYY/MM/DD HH:mm:ss')
-              }
+            <div>
+              {post.contents.map((content, index) => {
+                const key = `${post.id}-${index}`;
+                switch (content.type) {
+                  case 'heading_2':
+                    return (
+                      <h2 key={key} className={styles.heading2}>
+                        {content.text}
+                      </h2>
+                    );
+                  case 'heading_3':
+                    return (
+                      <h3 key={key} className={styles.heading3}>
+                        {content.text}
+                      </h3>
+                    );
+                  case 'paragraph':
+                    return (
+                      <p key={key} className={styles.paragraph}>
+                        {content.text}
+                      </p>
+                    );
+                  case 'code':
+                    return (
+                      <pre className={`${styles.code} lang-${content.language}`}>
+                        <code>{content.text}</code>
+                      </pre>
+                    );
+                  case 'quote':
+                    return (
+                      <blockquote key={key} className={styles.quote}>
+                        {content.text}
+                      </blockquote>
+                    );
+                  default:
+                    return <div key={key}>Unknown content type</div>;
+                }
+              })}
             </div>
           </div>
-        </div>
-        <div>
-        {post.contents.map((content, index) => {
-            const key = `${post.id}-${index}`;
-            switch(content.type) {
-              case 'heading_2':
-                return (
-                  <h2 key={key} className={styles.heading2}>
-                    {content.text}
-                  </h2>
-                );
-              case 'heading_3':
-                return (
-                  <h3 key={key} className={styles.heading3}>
-                    {content.text}
-                  </h3>
-                );
-              case 'paragraph':
-                return (
-                  <p key={key} className={styles.paragraph}>
-                    {content.text}
-                  </p>
-                );
-              case 'code':
-                return (
-                  <pre
-                      className={`${styles.code} lang-${content.language} `}
-                  >
-                    <code>{content.text}</code>
-                  </pre>
-                );
-              case 'quote':
-                return (
-                  <blockquote key={key} className={styles.quote}>
-                    {content.text}
-                  </blockquote>
-                );
-            }
-        })}
-        </div>
-      </div>
+        );
+      })}
     </div>
-   );
+  );
 };
-
 export default Home;
