@@ -2,6 +2,8 @@ import { Client } from '@notionhq/client';
 import { NextPage, GetStaticProps } from 'next';
 import styles from '../styles/Home.module.css';
 import dayjs from 'dayjs';
+import prism from 'prismjs';
+import { useEffect } from 'react';
 
 const notion = new Client({
   auth: process.env.NOTION_TOKEN,
@@ -144,6 +146,10 @@ type StaticProps = {
 
 
 const Home: NextPage<StaticProps> = ({ post }) => {
+
+  useEffect(() => {
+    prism.highlightAll();
+  }, []);
    if(!post) {
     return null;
    } 
