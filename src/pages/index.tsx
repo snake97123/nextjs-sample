@@ -7,6 +7,8 @@ import { useEffect } from 'react';
 import { QueryDatabaseResponse } from '@notionhq/client/build/src/api-endpoints';
 import Link from 'next/link';
 import { get } from 'http';
+import { Layout } from '../../lib/component/Layout';
+import { PostComponent } from '../../lib/component/Post';
 
 const notion = new Client({
   auth: process.env.NOTION_TOKEN,
@@ -56,9 +58,9 @@ export const getPosts = async (slug?: string) => {
     filter: {
     and: [
       {
-        property: 'published',
-        checkbox: {
-          equals: true
+        property: 'slug',
+        multi_select: {
+          contains: slug
         }
       }
     ]
@@ -97,6 +99,7 @@ const blockResponse = await Promise.all(
   })
 );
 // const page = database.results[0];
+// console.log(database.results);
 database.results.forEach((page, index) => {
 if(!page || !('properties' in page)) {
   return {
@@ -116,6 +119,7 @@ if (page.properties['name'] && page.properties['name'].type === 'title' && Array
 let slug: string | null = null;
 if (page.properties['slug'] && page.properties['slug'].type === 'multi_select' && Array.isArray(page.properties['slug'].multi_select)) {
   slug = page.properties['slug'].multi_select[0]?.name ?? null;
+
 }
 
 const blocks = blockResponse[index];
@@ -168,6 +172,7 @@ posts.push({
 })
 
 });
+
 return posts;
 
 }
@@ -220,76 +225,20 @@ return contents
 
 
 const Home: NextPage<StaticProps> = ({ posts }) => {
- 
-  if (!posts) {
-    return null;
-  }
+    useEffect(() => {
+      prism.highlightAll();
+    }, []);
 
-  return (
-    <div className={styles.wrapper}>
-      {posts.map((post) => {
-        return (
-          <div className={styles.post} key={post.id}>
-            <h1 className={styles.title}>
-              <Link href={`/post/${encodeURIComponent(post.slug ?? '')}`}>
-                {post.title}
-              </Link>
-            </h1>
-            <div className={styles.timestampWrapper}>
-              <div>
-                <div className={styles.timestamp}>
-                  作成日時:{' '}
-                  {dayjs(post.createdTs).format('YYYY/MM/DD HH:mm:ss')}
-                </div>
-                <div className={styles.timestamp}>
-                  更新日時:{' '}
-                  {dayjs(post.lastEditedTs).format('YYYY/MM/DD HH:mm:ss')}
-                </div>
-              </div>
-            </div>
-            <div>
-              {post.contents.map((content, index) => {
-                const key = `${post.id}-${index}`;
-                switch (content.type) {
-                  case 'heading_2':
-                    return (
-                      <h2 key={key} className={styles.heading2}>
-                        {content.text}
-                      </h2>
-                    );
-                  case 'heading_3':
-                    return (
-                      <h3 key={key} className={styles.heading3}>
-                        {content.text}
-                      </h3>
-                    );
-                  case 'paragraph':
-                    return (
-                      <p key={key} className={styles.paragraph}>
-                        {content.text}
-                      </p>
-                    );
-                  case 'code':
-                    return (
-                      <pre className={`${styles.code} lang-${content.language}`}>
-                        <code>{content.text}</code>
-                      </pre>
-                    );
-                  case 'quote':
-                    return (
-                      <blockquote key={key} className={styles.quote}>
-                        {content.text}
-                      </blockquote>
-                    );
-                  default:
-                    return <div key={key}>Unknown content type</div>;
-                }
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
+    if (!posts) {
+      return null;
+    }
+
+    return (
+      <Layout>
+        {posts.map((post) => {
+          return <PostComponent post={post} key={post.id} />;
+        })}
+      </Layout>
+    );
+  };
 export default Home;
